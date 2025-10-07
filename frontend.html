@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon Review Sentiment Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .input-section {
+            grid-column: 1 / -1;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .predict-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .predict-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .clear-btn {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .clear-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .result-box {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: 600;
+            display: none;
+        }
+
+        .result-positive {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .result-negative {
+            background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+            color: white;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .metric {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            color: #667eea;
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .model-info {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .model-info h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .model-info ul {
+            list-style-position: inside;
+            color: #666;
+        }
+
+        .model-info li {
+            padding: 5px 0;
+        }
+
+        .confusion-matrix {
+            display: grid;
+            grid-template-columns: auto 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .cm-cell {
+            background: #f5f7fa;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .cm-header {
+            background: #667eea;
+            color: white;
+        }
+
+        .cm-value {
+            font-size: 1.5em;
+            color: #667eea;
+        }
+
+        .sample-reviews {
+            margin-top: 15px;
+        }
+
+        .sample-btn {
+            padding: 8px 15px;
+            margin: 5px;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .sample-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛒 Amazon Review Sentiment Analyzer</h1>
+            <p class="subtitle">Powered by Machine Learning - Logistic Regression Model</p>
+        </header>
+
+        <div class="main-content">
+            <div class="card input-section">
+                <h2>Analyze Review</h2>
+                <textarea id="reviewInput" placeholder="Enter an Amazon product review here...
+
+Example: 'This product exceeded my expectations! Great quality and fast shipping.'"></textarea>
+                
+                <div class="sample-reviews">
+                    <p style="color: #666; margin-bottom: 10px;"><strong>Try sample reviews:</strong></p>
+                    <button class="sample-btn" onclick="setSample(0)">Positive Review</button>
+                    <button class="sample-btn" onclick="setSample(1)">Negative Review</button>
+                    <button class="sample-btn" onclick="setSample(2)">Mixed Review</button>
+                </div>
+
+                <div class="button-group">
+                    <button class="predict-btn" onclick="predictSentiment()">Analyze Sentiment</button>
+                    <button class="clear-btn" onclick="clearInput()">Clear</button>
+                </div>
+
+                <div id="resultBox" class="result-box"></div>
+            </div>
+
+            <div class="card">
+                <h2>Model Performance</h2>
+                <div class="metrics-grid">
+                    <div class="metric">
+                        <div class="metric-label">Accuracy</div>
+                        <div class="metric-value">88.1%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Precision</div>
+                        <div class="metric-value">88.0%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Recall</div>
+                        <div class="metric-value">88.0%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">F1-Score</div>
+                        <div class="metric-value">88.0%</div>
+                    </div>
+                </div>
+
+                <div class="confusion-matrix">
+                    <div class="cm-cell"></div>
+                    <div class="cm-cell cm-header">Pred Negative</div>
+                    <div class="cm-cell cm-header">Pred Positive</div>
+                    
+                    <div class="cm-cell cm-header">Actual Negative</div>
+                    <div class="cm-cell cm-value">4263</div>
+                    <div class="cm-cell">637</div>
+                    
+                    <div class="cm-cell cm-header">Actual Positive</div>
+                    <div class="cm-cell">554</div>
+                    <div class="cm-cell cm-value">4545</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Model Information</h2>
+                <div class="model-info">
+                    <h3>Preprocessing Pipeline</h3>
+                    <ul>
+                        <li>HTML tag removal</li>
+                        <li>Lowercase conversion</li>
+                        <li>Punctuation removal</li>
+                        <li>Stopwords removal</li>
+                        <li>Spelling correction (SymSpell)</li>
+                        <li>Lemmatization (SpaCy)</li>
+                    </ul>
+                </div>
+
+                <div class="model-info">
+                    <h3>Feature Extraction</h3>
+                    <ul>
+                        <li>TF-IDF Vectorization</li>
+                        <li>Max Features: 5000</li>
+                        <li>N-gram Range: (1, 2)</li>
+                    </ul>
+                </div>
+
+                <div class="model-info">
+                    <h3>Training Details</h3>
+                    <ul>
+                        <li>Dataset: 50,000 reviews</li>
+                        <li>Train/Test Split: 80/20</li>
+                        <li>Model: Logistic Regression</li>
+                        <li>Classes: Negative (1), Positive (2)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const sampleReviews = [
+            "This product is absolutely amazing! The quality exceeded my expectations and it arrived quickly. Highly recommend to anyone looking for great value.",
+            "Terrible quality and completely useless. Broke after just one use and customer service was unhelpful. Do not waste your money on this product.",
+            "The product is okay for the price. Works as described but nothing special. Shipping was fast though."
+        ];
+
+        function setSample(index) {
+            document.getElementById('reviewInput').value = sampleReviews[index];
+        }
+
+        function clearInput() {
+            document.getElementById('reviewInput').value = '';
+            document.getElementById('resultBox').style.display = 'none';
+        }
+
+        function predictSentiment() {
+            const review = document.getElementById('reviewInput').value.trim();
+            const resultBox = document.getElementById('resultBox');
+
+            if (!review) {
+                alert('Please enter a review to analyze!');
+                return;
+            }
+
+            // Simulate sentiment analysis (in production, this would call your backend API)
+            // Simple keyword-based prediction for demo purposes
+            const positiveWords = ['amazing', 'great', 'excellent', 'love', 'perfect', 'good', 'best', 'wonderful', 'fantastic', 'recommend'];
+            const negativeWords = ['terrible', 'bad', 'awful', 'horrible', 'waste', 'poor', 'worst', 'disappointed', 'useless', 'broke'];
+
+            const lowerReview = review.toLowerCase();
+            let positiveScore = 0;
+            let negativeScore = 0;
+
+            positiveWords.forEach(word => {
+                if (lowerReview.includes(word)) positiveScore++;
+            });
+
+            negativeWords.forEach(word => {
+                if (lowerReview.includes(word)) negativeScore++;
+            });
+
+            const isPositive = positiveScore > negativeScore;
+            const confidence = Math.min(95, 70 + Math.abs(positiveScore - negativeScore) * 5);
+
+            resultBox.className = 'result-box ' + (isPositive ? 'result-positive' : 'result-negative');
+            resultBox.innerHTML = `
+                <div style="font-size: 2em; margin-bottom: 10px;">${isPositive ? '😊' : '😞'}</div>
+                <div>Sentiment: <strong>${isPositive ? 'POSITIVE' : 'NEGATIVE'}</strong></div>
+                <div style="font-size: 0.9em; margin-top: 10px; opacity: 0.9;">Confidence: ${confidence}%</div>
+            `;
+            resultBox.style.display = 'block';
+
+            // Smooth scroll to result
+            resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Configuration
+        const API_URL = 'http://localhost:5000/predict';
+        const USE_BACKEND = true; // Set to false to use demo mode
+
+        async function predictSentimentBackend() {
+            const review = document.getElementById('reviewInput').value.trim();
+            const resultBox = document.getElementById('resultBox');
+
+            // Show loading state
+            resultBox.innerHTML = '<div>🔄 Analyzing... Please wait...</div>';
+            resultBox.className = 'result-box';
+            resultBox.style.display = 'block';
+            resultBox.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            resultBox.style.color = 'white';
+
+            try {
+                // Call backend API
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ review: review })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const isPositive = data.sentiment === 'Positive';
+                    resultBox.className = 'result-box ' + (isPositive ? 'result-positive' : 'result-negative');
+                    resultBox.innerHTML = `
+                        <div style="font-size: 2em; margin-bottom: 10px;">${isPositive ? '😊' : '😞'}</div>
+                        <div>Sentiment: <strong>${data.sentiment.toUpperCase()}</strong></div>
+                        <div style="font-size: 0.9em; margin-top: 10px; opacity: 0.9;">
+                            Confidence: ${data.confidence}%
+                        </div>
+                        <div style="font-size: 0.8em; margin-top: 10px; opacity: 0.8;">
+                            Positive: ${data.probabilities.positive}% | 
+                            Negative: ${data.probabilities.negative}%
+                        </div>
+                    `;
+                } else {
+                    throw new Error(data.message || 'Prediction failed');
+                }
+            } catch (error) {
+                console.error('API Error:', error);
+                resultBox.className = 'result-box';
+                resultBox.style.background = '#f44336';
+                resultBox.style.color = 'white';
+                resultBox.innerHTML = `
+                    <div style="font-size: 1.2em;">⚠️ Error</div>
+                    <div style="font-size: 0.9em; margin-top: 10px;">
+                        ${error.message}
+                    </div>
+                    <div style="font-size: 0.8em; margin-top: 10px; opacity: 0.8;">
+                        Make sure the backend API is running at ${API_URL}
+                    </div>
+                `;
+            }
+        }
+
+        // Original demo function
+        function predictSentimentDemo() {
+            const review = document.getElementById('reviewInput').value.trim();
+            const resultBox = document.getElementById('resultBox');
+
+            const positiveWords = ['amazing', 'great', 'excellent', 'love', 'perfect', 'good', 'best', 'wonderful', 'fantastic', 'recommend'];
+            const negativeWords = ['terrible', 'bad', 'awful', 'horrible', 'waste', 'poor', 'worst', 'disappointed', 'useless', 'broke'];
+
+            const lowerReview = review.toLowerCase();
+            let positiveScore = 0;
+            let negativeScore = 0;
+
+            positiveWords.forEach(word => {
+                if (lowerReview.includes(word)) positiveScore++;
+            });
+
+            negativeWords.forEach(word => {
+                if (lowerReview.includes(word)) negativeScore++;
+            });
+
+            const isPositive = positiveScore > negativeScore;
+            const confidence = Math.min(95, 70 + Math.abs(positiveScore - negativeScore) * 5);
+
+            resultBox.className = 'result-box ' + (isPositive ? 'result-positive' : 'result-negative');
+            resultBox.innerHTML = `
+                <div style="font-size: 2em; margin-bottom: 10px;">${isPositive ? '😊' : '😞'}</div>
+                <div>Sentiment: <strong>${isPositive ? 'POSITIVE' : 'NEGATIVE'}</strong></div>
+                <div style="font-size: 0.9em; margin-top: 10px; opacity: 0.9;">Confidence: ${confidence}%</div>
+                <div style="font-size: 0.8em; margin-top: 10px; opacity: 0.8;">(Demo Mode - Start backend for real predictions)</div>
+            `;
+            resultBox.style.display = 'block';
+        }
+
+        // Main prediction function
+        function predictSentiment() {
+            const review = document.getElementById('reviewInput').value.trim();
+
+            if (!review) {
+                alert('Please enter a review to analyze!');
+                return;
+            }
+
+            if (USE_BACKEND) {
+                predictSentimentBackend();
+            } else {
+                predictSentimentDemo();
+            }
+
+            // Smooth scroll to result
+            setTimeout(() => {
+                document.getElementById('resultBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        }
+
+        // Allow Enter key to submit (with Shift+Enter for new line)
+        document.getElementById('reviewInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                predictSentiment();
+            }
+        });
+    </script>
+</body>
+</html>
